@@ -85,4 +85,40 @@ function confirmChatImport(){if(!pendingChat.length)return;for(const p of pendin
 function exportChatPhrases(){const data=JSON.stringify([...phrases].sort((a,b)=>Number(a.id)-Number(b.id)),null,2),blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='MR_ORBEA_frases_respaldo.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 const oldShowLibrary=showLibrary;
 showLibrary=function(){oldShowLibrary();const body=document.getElementById('extraBody');const b=document.createElement('button');b.className='primary';b.textContent='↔ Importar frases aprobadas desde ChatGPT';b.onclick=chatTransfer;body.prepend(b)};
-</script></body></html>
+</script>
+<script>
+/* MR.ORBEA: conexión pública de solo lectura, sin secretos y sin cambiar los controles de micrófono. */
+(()=>{
+  const PROJECT_URL='https://ozkkircclomersxhksub.supabase.co';
+  const PUBLIC_KEY='sb_publishable_pkTqDmKnHQk3sPw9qzQi7g_-GWW0-vl';
+  localStorage.setItem('mrorbea-sb-url',PROJECT_URL);
+  localStorage.setItem('mrorbea-sb-key',PUBLIC_KEY);
+  let busy=false;
+  async function refreshApproved(){
+    if(busy)return;busy=true;
+    try{
+      const count=await syncSupabase();
+      // Conserva las frases originales incluso si una aún no está publicada en la base.
+      const combined=new Map(basePhrases.map(p=>[String(p.id),p]));
+      (serverPhrases||[]).forEach(p=>combined.set(String(p.id),p));
+      serverPhrases=[...combined.values()];
+      applyEdits();
+      document.dispatchEvent(new CustomEvent('mrorbea-sync',{detail:{count}}));
+    }catch(err){console.warn('MR.ORBEA: se conserva biblioteca local:',err.message)}
+    finally{busy=false}
+  }
+  window.mrOrbeaSync=refreshApproved;
+  refreshApproved();
+  setInterval(()=>{if(!document.hidden)refreshApproved()},30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshApproved()});
+  window.addEventListener('focus',refreshApproved);
+  // Indicador informativo; el botón verde existente permanece intacto.
+  const status=document.createElement('div');
+  status.id='mrorbea-sync-note';
+  status.style.cssText='text-align:center;color:#9fb9ad;font-size:11px;padding:7px 10px';
+  status.textContent='Biblioteca conectada · Sincronización automática';
+  const footer=document.querySelector('footer');
+  if(footer)footer.insertAdjacentElement('beforebegin',status);
+})();
+</script>
+</body></html>
