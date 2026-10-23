@@ -1,0 +1,10 @@
+[build]
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"
