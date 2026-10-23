@@ -1,16 +1,17 @@
 {
-  "name": "READY",
-  "short_name": "READY",
-  "start_url": "/",
+  "name": "MR.ORBEA English Practice PRO",
+  "short_name": "MR.ORBEA",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#060b09",
   "icons": [
     {
-      "src": "/ready-icon.png",
+      "src": "./ready-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "scope": "./"
 }
