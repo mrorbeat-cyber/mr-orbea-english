@@ -5,21 +5,17 @@ const scenarios=[
  {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]}
 ];
 let active=null,step=0,showSpanish=true,showPron=false,hideAnswer=false,speed=0.9;
-const oldSpecial=showSpecial;
 function available(d){return d.turns.every(t=>phrases.some(p=>Number(p.id)===t.id))}
 function phrase(t){return phrases.find(p=>Number(p.id)===t.id)}
 function stopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
 function speak(){stopAudio();if(!('speechSynthesis' in window))return;let p=phrase(active.turns[step]);if(!p)return;const u=new SpeechSynthesisUtterance(p.en);u.lang='en-US';u.rate=speed;window.speechSynthesis.speak(u)}
 function renderMenu(){
  const root=document.getElementById('categories');
- const cats=['Trabajo','Restaurante','Banco y pagos','Compras','Vida cotidiana','Salud y farmacia'];
  const have=scenarios.filter(available);
  document.querySelector('#special .title').textContent='Diálogos reales';
- root.innerHTML='<div class="card"><h2>Aprende a conversar</h2><p class="muted">Pregunta, responde y continúa conversaciones con tus frases aprobadas. No se generan ni guardan frases nuevas sin tu autorización.</p></div>'+
- cats.map(cat=>'<button class="category" data-dialog-cat="'+cat+'">💬 '+cat+' <small>· '+have.filter(d=>d.cat===cat).length+' diálogos</small></button>').join('')+
- '<div class="card"><button id="openOriginalSpecial">📚 Ver frases de Inglés especializado</button></div>';
- root.querySelectorAll('[data-dialog-cat]').forEach(el=>el.onclick=()=>showCategory(el.dataset.dialogCat));
- root.querySelector('#openOriginalSpecial').onclick=()=>oldSpecial();
+ root.innerHTML='<div class="card"><h2>Aprende a conversar</h2><p class="muted">Practica preguntas y respuestas reales con frases aprobadas. Aquí no aparece la antigua biblioteca ni categorías vacías.</p></div>'+
+ (have.length?have.map(d=>'<button class="category" data-dialog-id="'+d.id+'">💬 '+d.title+' <small>· '+d.turns.length+' intervenciones aprobadas</small></button>').join(''):'<div class="card"><p>Sin diálogos disponibles. Verifica la sincronización de Supabase.</p></div>');
+ root.querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
  show('special');
 }
 function showCategory(cat){
