@@ -87,14 +87,14 @@ renderList=function(){const cats=[...new Set(phrases.filter(p=>(p.folder||'work'
 showSpecial=function(){activeFolder='special';const cats=[...new Set([...edits.categories,...phrases.filter(p=>p.folder==='special').map(p=>p.cat)])].filter(Boolean);document.getElementById('categories').innerHTML=cats.map(c=>'<button class="category" data-cat="'+safe(c)+'">📁 '+safe(c)+' <small>· '+phrases.filter(p=>p.folder==='special'&&p.cat===c).length+' frases</small></button>').join('');document.querySelectorAll('#categories .category').forEach(el=>el.onclick=()=>showSpecialCategory(el.dataset.cat));show('special')};
 function showSpecialCategory(cat){activeFolder='special';activeCategory=cat;document.getElementById('extraTitle').textContent=cat;const arr=phrases.filter(p=>p.folder==='special'&&p.cat===cat).sort((a,b)=>Number(b.id)-Number(a.id));document.getElementById('extraBody').innerHTML='<button class="primary" onclick="openEditor(null,\'special\',activeCategory)">＋ Agregar frase</button>'+(arr.length?arr.map(p=>'<button class="phrase" data-id="'+safe(p.id)+'"><strong>'+safe(p.en)+'</strong><small>'+safe(p.es)+'</small></button>').join(''):'<p>Esta categoría está vacía. Agrega tu primera frase.</p>');document.querySelectorAll('#extraBody .phrase').forEach(el=>el.onclick=()=>openPhrase(Number(el.dataset.id)));show('extras')}
 function openEditor(p=null,folder=null,cat=null){
- const editing=!!p,chosen=folder||(p?.folder||activeFolder||'work');
+ const editing=!!p,chosen=folder||(p?.folder||'inbox');
  document.getElementById('extraTitle').textContent=editing?'Editar frase':'Nueva frase';
  document.getElementById('extraBody').innerHTML=
  '<label for="editEn">Inglés</label><textarea id="editEn" rows="2"></textarea>'+
  '<label for="editEs">Español</label><textarea id="editEs" rows="2"></textarea>'+
  '<label for="editPron">Pronunciación (opcional)</label><input id="editPron">'+
  '<label for="editFolder">1. ¿Dónde quieres guardar esta frase?</label>'+
- '<select id="editFolder" onchange="updateEditCats(true)"><option value="work">Inglés diario y trabajo</option><option value="special">Inglés especializado</option></select>'+
+ '<select id="editFolder" onchange="updateEditCats(true)"><option value="inbox">Receptáculo · Pendientes</option><option value="work">Diario y trabajo · Clasificadas</option><option value="special">Categorías especializadas</option></select>'+
  '<label for="editCat">2. ¿En qué categoría?</label><select id="editCat" onchange="if(this.value===\'__new__\')createEditorCategory()"></select>'+
  '<p class="muted" style="font-size:13px">Las categorías dependen de la sección elegida.</p>'+
  '<div class="grid" style="margin-top:16px"><button class="primary" onclick="commitEditor('+JSON.stringify(p?.id??null)+')">Guardar en este iPhone</button><button onclick="editorCancel()">Cancelar</button></div>'+
@@ -110,12 +110,12 @@ function editorCancel(){if(activeFolder==='special')showSpecial();else showWork(
 function updateEditCats(reset=false,preferred=null){
  const folder=document.getElementById('editFolder').value,sel=document.getElementById('editCat');
  const previous=preferred||(!reset?sel.value:null);
- const defaults=folder==='special'?['Restaurante','Banco y pagos','Salud y farmacia','Compras','Trámites en Estados Unidos','Viajes']:['Trabajo','Vida cotidiana'];
+ const defaults=folder==='special'?['Restaurante','Banco y pagos','Salud y farmacia','Compras','Trámites en Estados Unidos','Viajes']:folder==='inbox'?['Pendiente']:['Trabajo','Vida cotidiana'];
  const existing=phrases.filter(p=>(p.folder||'work')===folder).map(p=>p.cat);
  const custom=folder==='special'?edits.categories.filter(c=>!['Trabajo','Vida cotidiana'].includes(c)):[];
  const cats=[...new Set([...defaults,...existing,...custom].filter(Boolean))];
  sel.innerHTML=cats.map(c=>'<option value="'+safe(c)+'">'+safe(c)+'</option>').join('')+'<option value="__new__">＋ Crear nueva categoría…</option>';
- sel.value=cats.includes(previous)?previous:(folder==='special'?'Restaurante':'Trabajo');
+ sel.value=cats.includes(previous)?previous:(folder==='special'?'Restaurante':folder==='inbox'?'Pendiente':'Trabajo');
 }
 function createEditorCategory(){
  const sel=document.getElementById('editCat'),folder=document.getElementById('editFolder').value;
@@ -139,6 +139,7 @@ function commitEditor(id){
   edits.changes[String(id)]={...(edits.changes[String(id)]||{}),...patch};
  }
  if(folder==='special'&&!edits.categories.includes(cat))edits.categories.push(cat);
+ recordLocalHistory(id===null?'CREATE':'EDIT',id===null?edits.added[edits.added.length-1]:{id,...patch});
  saveEdits();
  folder==='special'?showSpecialCategory(cat):showWork();
 }
@@ -221,5 +222,88 @@ showLibrary=function(){oldShowLibrary();const body=document.getElementById('extr
   const oldShowSpecial=showSpecial;
   showSpecial=function(){oldShowSpecial();refreshApproved()};
 })();
+</script>
+<script>
+/* MR.ORBEA inbox and categorized library: local edits remain local; remote records remain read-only. */
+const ORBEA_HISTORY_KEY='mrorbea-local-history-v1';
+function recordLocalHistory(action,phrase){
+ const entries=JSON.parse(localStorage.getItem(ORBEA_HISTORY_KEY)||'[]');
+ entries.push({action,at:new Date().toISOString(),phrase:JSON.parse(JSON.stringify(phrase))});
+ localStorage.setItem(ORBEA_HISTORY_KEY,JSON.stringify(entries));
+}
+const originalSaveEdits=saveEdits;
+saveEdits=function(){originalSaveEdits();refreshOrbeaCounts()};
+function refreshOrbeaCounts(){
+ const homeButtons=document.querySelectorAll('.homefolders .folder strong');
+ if(homeButtons[0])homeButtons[0].textContent='RECEPTÁCULO';
+ if(homeButtons[1])homeButtons[1].textContent='CATEGORÍAS';
+ const desc=document.querySelector('.folder small');
+ if(desc)desc.innerHTML=phrases.filter(p=>p.folder==='inbox').length+' frases pendientes de clasificar';
+}
+showWork=function(){
+ activeFolder='inbox';activeCategory='';favoritesOnly=false;
+ document.querySelector('#work .title').textContent='Receptáculo · Pendientes';
+ const arr=phrases.filter(p=>p.folder==='inbox').sort((a,b)=>Number(b.id)-Number(a.id));
+ document.getElementById('count').textContent=arr.length+' frases pendientes';
+ document.getElementById('list').innerHTML=arr.map(p=>'<div class="card"><strong>'+safe(p.en)+'</strong><p class="muted">'+safe(p.es)+'</p><button class="primary" data-move="'+safe(p.id)+'">Enviar a categoría</button> <button data-edit="'+safe(p.id)+'">Editar</button></div>').join('')||'<p class="empty">Receptáculo vacío. Todas las frases recibidas ya están clasificadas.</p>';
+ document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>moveToCategory(Number(b.dataset.move)));
+ document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(phrases.find(p=>p.id===Number(b.dataset.edit))));
+ const tools=document.querySelector('#work .card');
+ if(tools)tools.hidden=true;
+ document.getElementById('search').hidden=true;
+ show('work');
+};
+function moveToCategory(id){
+ const p=phrases.find(x=>Number(x.id)===Number(id));
+ if(!p||p.folder!=='inbox')return;
+ const categories=[...new Set(['Trabajo','Vida cotidiana','Restaurante','Banco y pagos','Salud y farmacia','Compras','Trámites en Estados Unidos','Viajes',...edits.categories])];
+ const choice=prompt('Escribe la categoría de destino:\n'+categories.join(' · '),'Trabajo');
+ if(choice===null)return;
+ const cat=choice.trim();
+ if(!categories.includes(cat)){alert('Selecciona una categoría existente.');return}
+ const folder=['Trabajo','Vida cotidiana'].includes(cat)?'work':'special';
+ if(phrases.some(q=>q.id!==p.id&&q.folder!=='inbox'&&q.en.trim().toLowerCase()===p.en.trim().toLowerCase())){alert('Ya existe una frase con el mismo inglés en Categorías. No se movió.');return}
+ if(!confirm('¿Enviar esta frase a '+cat+'? Desaparecerá del receptáculo.'))return;
+ recordLocalHistory('BEFORE_MOVE',p);
+ const idx=edits.added.findIndex(q=>String(q.id)===String(id));
+ if(idx>=0)edits.added[idx]={...edits.added[idx],folder,cat};
+ else edits.changes[String(id)]={...(edits.changes[String(id)]||{}),folder,cat};
+ recordLocalHistory('MOVE',{...p,folder,cat});
+ saveEdits();showWork();
+}
+showSpecial=function(){
+ activeFolder='special';
+ document.querySelector('#special .title').textContent='CATEGORÍAS';
+ const defaults=['Trabajo','Vida cotidiana','Restaurante','Banco y pagos','Salud y farmacia','Compras','Trámites en Estados Unidos','Viajes'];
+ const cats=[...new Set([...defaults,...edits.categories,...phrases.filter(p=>p.folder!=='inbox').map(p=>p.cat)])].filter(Boolean);
+ document.getElementById('categories').innerHTML=cats.map(c=>'<button class="category" data-cat="'+safe(c)+'">📁 '+safe(c)+' <small>· '+phrases.filter(p=>p.folder!=='inbox'&&p.cat===c).length+' frases</small></button>').join('');
+ document.querySelectorAll('#categories .category').forEach(b=>b.onclick=()=>showSpecialCategory(b.dataset.cat));
+ show('special');
+};
+showSpecialCategory=function(cat){
+ activeFolder='special';activeCategory=cat;
+ document.getElementById('extraTitle').textContent=cat;
+ const arr=phrases.filter(p=>p.folder!=='inbox'&&p.cat===cat).sort((a,b)=>Number(b.id)-Number(a.id));
+ document.getElementById('extraBody').innerHTML=arr.map(p=>'<button class="phrase" data-id="'+safe(p.id)+'"><strong>'+safe(p.en)+'</strong><small>'+safe(p.es)+'</small></button>').join('')||'<p class="empty">Esta categoría está vacía.</p>';
+ document.querySelectorAll('#extraBody .phrase').forEach(b=>b.onclick=()=>openPhrase(Number(b.dataset.id)));
+ show('extras');
+};
+const originalOpenEditor=openEditor;
+openEditor=function(p=null,folder=null,cat=null){originalOpenEditor(p,folder,cat);if(!p){document.getElementById('editFolder').value='inbox';updateEditCats(true)}};
+const originalApplyEdits=applyEdits;
+applyEdits=function(){originalApplyEdits();refreshOrbeaCounts();if(!document.getElementById('work').hidden)showWork()};
+const originalShowLibrary=showLibrary;
+showLibrary=function(){
+ originalShowLibrary();
+ const btn=document.createElement('button');
+ btn.textContent='⬇ Descargar histórico local de seguridad';
+ btn.onclick=()=>{
+  const data=JSON.stringify({exportedAt:new Date().toISOString(),phrases,history:JSON.parse(localStorage.getItem(ORBEA_HISTORY_KEY)||'[]'),localEdits:edits},null,2);
+  const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='MR_ORBEA_historico_local.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ };
+ document.getElementById('extraBody').appendChild(btn);
+};
+refreshOrbeaCounts();
 </script>
 </body></html>
