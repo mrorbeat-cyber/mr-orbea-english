@@ -99,25 +99,34 @@ function available(d){return d.turns.every(t=>t.en&&t.es||phrases.some(p=>Number
 function phrase(t){return t.en&&t.es?{en:t.en,es:t.es,pron:t.pron||'',id:t.id}:phrases.find(p=>Number(p.id)===t.id)}
 function stopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
 function speak(){stopAudio();if(!('speechSynthesis' in window))return;let p=phrase(active.turns[step]);if(!p)return;const u=new SpeechSynthesisUtterance(p.en);u.lang='en-US';u.rate=speed;window.speechSynthesis.speak(u)}
+function visibleDialogues(){
+ const valid=scenarios.filter(d=>available(d)&&(!d.id.startsWith('mine-')||d.turns.every(t=>phrases.find(p=>Number(p.id)===t.id)?.cat===d.cat)));
+ const seen=new Map();
+ for(const d of valid){const key=d.id==='walgreens-practice'||d.id==='walgreens-prescription'?'walgreens-prescription':d.id;if(!seen.has(key))seen.set(key,d)}
+ return [...seen.values()].filter(d=>d.id!=='walgreens-practice');
+}
+function topicOf(d){return d.cat==='Salud y farmacia'&&d.id.startsWith('walgreens')?'Walgreens':d.cat}
 function renderMenu(){
  const root=document.getElementById('categories');
- const have=scenarios.filter(d=>available(d)&&(!d.id.startsWith('mine-')||d.turns.every(t=>phrases.find(p=>Number(p.id)===t.id)?.cat===d.cat)));
+ const items=visibleDialogues(),topics=[...new Set(items.map(topicOf))];
  document.querySelector('#special .title').textContent='Diálogos reales';
- root.innerHTML='<div class="card"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button></div><div class="card"><h2>Aprende a conversar</h2><p class="muted">Practica preguntas y respuestas reales con frases aprobadas. Aquí no aparece la antigua biblioteca ni categorías vacías.</p></div>'+
- (have.length?have.map(d=>'<button class="category" data-dialog-id="'+d.id+'">💬 '+d.title+' <small>· '+d.turns.length+' intervenciones aprobadas</small></button>').join(''):'<div class="card"><p>Sin diálogos disponibles. Verifica la sincronización de Supabase.</p></div>');
+ root.innerHTML='<div class="card"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button></div>'+
+ '<div class="card"><h2>Mis situaciones</h2><p class="muted">Elige un tema y después la conversación que quieras practicar.</p></div>'+
+ topics.map(t=>'<button class="category" data-topic="'+safe(t)+'">📁 '+safe(t)+' <small>· '+items.filter(d=>topicOf(d)===t).length+' situaciones</small></button>').join('');
  root.querySelector('#dlgCreate').onclick=editDialogue;
- root.querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
+ root.querySelectorAll('[data-topic]').forEach(el=>el.onclick=()=>showTopic(el.dataset.topic));
  show('special');
 }
-function showCategory(cat){
- const matches=scenarios.filter(d=>d.cat===cat&&available(d));
- document.getElementById('extraTitle').textContent='Diálogos · '+cat;
- document.getElementById('extraBody').innerHTML='<button id="dialogBackMenu">← Todas las situaciones</button><p class="muted">Selecciona un diálogo para practicar. Solo se usan frases ya aprobadas.</p>'+
- (matches.length?matches.map(d=>'<button class="phrase" data-dialog-id="'+d.id+'"><strong>'+d.title+'</strong><small>'+d.description+' · '+d.turns.length+' intervenciones</small></button>').join(''):'<div class="card"><strong>Aún no hay diálogos aprobados en esta situación.</strong><p class="muted">Puedes seguir utilizando las frases individuales de tu biblioteca. No inventaremos conversaciones automáticamente.</p></div>');
+function showTopic(topic){
+ const matches=visibleDialogues().filter(d=>topicOf(d)===topic);
+ document.getElementById('extraTitle').textContent=topic;
+ document.getElementById('extraBody').innerHTML='<button id="dialogBackMenu">← Temas</button>'+
+ matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Walgreens · /,''))+'</strong><small>'+d.turns.length+' intervenciones · '+safe(d.description||'')+'</small></button>').join('');
  document.getElementById('extraBody').querySelector('#dialogBackMenu').onclick=renderMenu;
  document.getElementById('extraBody').querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
  show('extras');
 }
+function showCategory(cat){showTopic(cat==='Salud y farmacia'?'Walgreens':cat)}
 function start(id){active=scenarios.find(d=>d.id===id);step=0;hideAnswer=false;renderTurn()}
 function renderTurn(){
  if(!active)return;
