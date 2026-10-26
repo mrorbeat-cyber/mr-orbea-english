@@ -16,6 +16,21 @@ function loadMyDialogues(){
  }catch(e){console.warn('No se pudieron recuperar diálogos locales',e)}
 }
 loadMyDialogues();
+async function syncApprovedDialogues(){
+ const url=localStorage.getItem('mrorbea-sb-url'),key=localStorage.getItem('mrorbea-sb-key');
+ if(!url||!key)return;
+ try{
+  const response=await fetch(url+'/rest/v1/dialogues?select=slug,title,category,description,turns&approved=eq.true&order=id.asc',{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const rows=await response.json();
+  if(!Array.isArray(rows))return;
+  const remote=rows.filter(d=>d&&typeof d.slug==='string'&&Array.isArray(d.turns)&&d.turns.length>=2&&d.turns.every(t=>Number.isInteger(Number(t.id))&&typeof t.who==='string')).map(d=>({id:d.slug,title:d.title,cat:d.category,description:d.description||'',turns:d.turns.map(t=>({id:Number(t.id),who:t.who}))}));
+  remote.forEach(d=>{const index=scenarios.findIndex(x=>x.id===d.id);if(index>=0)scenarios[index]=d;else scenarios.push(d)});
+  if(!document.getElementById('special').hidden)renderMenu();
+ }catch(e){console.warn('Diálogos: se usan copias locales disponibles',e.message)}
+}
+document.addEventListener('mrorbea-sync',()=>syncApprovedDialogues());
+syncApprovedDialogues();
 let builderTurns=[];
 function editDialogue(){
  stopAudio();builderTurns=[];renderBuilder();
