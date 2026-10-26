@@ -169,6 +169,7 @@ function renderTurn(){
  '<p class="muted">'+active.title+' · Turno '+(step+1)+' de '+active.turns.length+(active.draft?' · Propuesta pendiente de tu revisión':'')+'</p>'+
  '<div class="card"><small>'+t.who+' · '+(active.draft?'PROPUESTA PARA PRACTICAR · NO APROBADA':'Frase '+String(t.id).padStart(3,'0')+' · Aprobada')+'</small>'+
  (hideAnswer&&t.who==='Tú'?'<h2>Intenta decir tu frase antes de verla</h2><button id="dialogReveal">Mostrar respuesta</button>':'<h2 id="dialogEnglish"></h2>'+(showSpanish?'<p id="dialogSpanish" class="muted"></p>':'')+(showPron?'<p id="dialogPron" class="muted"></p>':''))+'</div>'+
+ '<div class="card"><button id="dialogCorrect">✎ Corregir esta frase</button><p class="muted">Solicita revisión y aprobación antes de guardar una nueva versión. La frase oficial permanece intacta.</p></div>'+
  '<div class="card"><div class="grid"><button id="dialogListen" class="primary">▶ Escuchar</button><button id="dialogStop">■ Detener</button></div>'+
  '<label>Velocidad</label><select id="dialogSpeed"><option value="0.75">Lenta</option><option value="0.9">Normal</option><option value="1.05">Rápida</option></select></div>'+
  '<div class="card"><label><input type="checkbox" id="dialogSpanishToggle"> Español</label> <label><input type="checkbox" id="dialogPronToggle"> Pronunciación</label><label><input type="checkbox" id="dialogHideToggle"> Ocultar mis respuestas</label></div>'+
@@ -178,6 +179,27 @@ function renderTurn(){
  const pr=body.querySelector('#dialogPron');if(pr)pr.textContent=p.pron||'Pronunciación pendiente';
  body.querySelector('#dialogBackCategory').onclick=()=>showCategory(active.cat);
  const reveal=body.querySelector('#dialogReveal');if(reveal)reveal.onclick=()=>{hideAnswer=false;renderTurn()};
+
+ body.querySelector('#dialogCorrect').onclick=()=>{
+  stopAudio();
+  const original={id:t.id,en:p.en,es:p.es,pron:p.pron||'',speaker:t.who,dialogue:active.title,step:step+1};
+  const panel=document.createElement('div');panel.className='card';panel.id='dialogCorrectionPanel';
+  const title=document.createElement('h3');title.textContent='Proponer corrección · Sin guardar';panel.appendChild(title);
+  const fields=[['Inglés',original.en],['Español',original.es],['Pronunciación',original.pron]];
+  const inputs=fields.map(([label,value])=>{const l=document.createElement('label');l.textContent=label;panel.appendChild(l);const a=document.createElement('textarea');a.rows=2;a.value=value;panel.appendChild(a);return a});
+  const msg=document.createElement('p');msg.className='muted';msg.textContent='La corrección debe ser revisada y aceptada antes de modificar Supabase o publicar.';panel.appendChild(msg);
+  const ask=document.createElement('button');ask.className='primary';ask.textContent='Solicitar revisión y aprobación';panel.appendChild(ask);
+  ask.onclick=()=>{
+   const [en,es,pron]=inputs.map(x=>x.value.trim());
+   if(!en||!es){msg.textContent='Inglés y español son obligatorios.';return}
+   const request='MR.ORBEA · CORRECCIÓN PENDIENTE. Diálogo: '+original.dialogue+', turno '+original.step+', hablante '+original.speaker+', ID '+original.id+'. ORIGINAL: EN '+original.en+'; ES '+original.es+'; pronunciación '+original.pron+'. PROPUESTA: EN '+en+'; ES '+es+'; pronunciación '+pron+'. Audita gramática, sentido, naturalidad, pronunciación y coherencia con el contexto. Comprueba duplicados y referencias antes de proponer la versión final. SOLICITA MI APROBACIÓN EXPRESA. NO GUARDES NI PUBLIQUES todavía.';
+   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(request).then(()=>{msg.textContent='Solicitud copiada. Pégala en el chat de Bernardo para revisarla. Nada se ha guardado.'}).catch(()=>{msg.textContent='Copia manualmente la propuesta para revisarla con Bernardo.'})}
+   else{const ta=document.createElement('textarea');ta.value=request;ta.rows=5;panel.appendChild(ta);msg.textContent='Copia este texto y envíalo a Bernardo.'}
+  };
+  const cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.onclick=()=>panel.remove();panel.appendChild(cancel);
+  body.querySelector('#dialogCorrectionPanel')?.remove();
+  body.querySelector('#dialogCorrect').parentElement.after(panel);
+ };
  body.querySelector('#dialogListen').onclick=speak;
  body.querySelector('#dialogStop').onclick=stopAudio;
  body.querySelector('#dialogSpeed').value=String(speed);body.querySelector('#dialogSpeed').onchange=e=>{speed=Number(e.target.value);stopAudio()};
