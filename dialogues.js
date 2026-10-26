@@ -2,7 +2,8 @@
 (function(){
 'use strict';
 const scenarios=[
- {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]}
+ {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]},
+ {id:'bank-deposit',cat:'Banco y pagos',title:'Depósito desde cuenta de cheques',description:'Conversar sobre retiro de efectivo o transferencia desde tu cuenta.',turns:[{id:5,who:'Empleado'},{id:56,who:'Tú'},{id:71,who:'Empleado'},{id:72,who:'Tú'},{id:73,who:'Empleado'}]}
 ];
 let active=null,step=0,showSpanish=true,showPron=false,hideAnswer=false,speed=0.9;
 function available(d){return d.turns.every(t=>phrases.some(p=>Number(p.id)===t.id))}
