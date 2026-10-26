@@ -101,11 +101,25 @@ function renderBuilder(){
  };
  show('extras');
 }
+const EDIT_KEY='mrorbea-dialogue-approved-overrides-v1';
+function readEdits(){try{return JSON.parse(localStorage.getItem(EDIT_KEY)||'{}')}catch(_){return {}}}
+function saveEdit(dialogueId,index,entry){
+ const edits=readEdits(),key=dialogueId+':'+index;
+ const prior=edits[key];
+ edits[key]={...entry,history:[...(prior?.history||[]),...(prior?[{en:prior.en,es:prior.es,pron:prior.pron,at:prior.at}]:[])],at:new Date().toISOString()};
+ localStorage.setItem(EDIT_KEY,JSON.stringify(edits));
+}
+function turnPhrase(){
+ const t=active.turns[step],p=phrase(t);
+ if(!p)return null;
+ const edit=readEdits()[active.id+':'+step];
+ return edit?{...p,...edit}:p;
+}
 let active=null,step=0,showSpanish=true,showPron=false,hideAnswer=false,speed=0.9;
 function available(d){return d.turns.every(t=>t.en&&t.es||phrases.some(p=>Number(p.id)===t.id))}
 function phrase(t){return t.en&&t.es?{en:t.en,es:t.es,pron:t.pron||'',id:t.id}:phrases.find(p=>Number(p.id)===t.id)}
 function stopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
-function speak(){stopAudio();if(!('speechSynthesis' in window))return;let p=phrase(active.turns[step]);if(!p)return;const u=new SpeechSynthesisUtterance(p.en);u.lang='en-US';u.rate=speed;window.speechSynthesis.speak(u)}
+function speak(){stopAudio();if(!('speechSynthesis' in window))return;let p=turnPhrase();if(!p)return;const u=new SpeechSynthesisUtterance(p.en);u.lang='en-US';u.rate=speed;window.speechSynthesis.speak(u)}
 function visibleDialogues(){
  const valid=scenarios.filter(d=>available(d)&&(!d.id.startsWith('mine-')||d.turns.every(t=>phrases.find(p=>Number(p.id)===t.id)?.cat===d.cat)));
  const seen=new Map();
@@ -163,7 +177,7 @@ function start(id){active=scenarios.find(d=>d.id===id);step=0;hideAnswer=false;r
 function renderTurn(){
  if(!active)return;
  stopAudio();
- const t=active.turns[step],p=phrase(t),body=document.getElementById('extraBody');
+ const t=active.turns[step],p=turnPhrase(),body=document.getElementById('extraBody');
  if(!p){showCategory(active.cat);return}
  document.getElementById('extraTitle').textContent='Diálogo · '+active.cat;
  body.innerHTML='<button id="dialogBackCategory">← Volver a '+active.cat+'</button>'+
@@ -193,23 +207,33 @@ function renderTurn(){
  };
  body.querySelector('#dialogCorrect').onclick=()=>{
   stopAudio();
-  const original={id:t.id,en:p.en,es:p.es,pron:p.pron||'',speaker:t.who,dialogue:active.title,step:step+1};
   const panel=document.createElement('div');panel.className='card';panel.id='dialogCorrectionPanel';
-  const title=document.createElement('h3');title.textContent='Proponer corrección · Sin guardar';panel.appendChild(title);
-  const fields=[['Inglés',original.en],['Español',original.es],['Pronunciación',original.pron]];
-  const inputs=fields.map(([label,value])=>{const l=document.createElement('label');l.textContent=label;panel.appendChild(l);const a=document.createElement('textarea');a.rows=2;a.value=value;panel.appendChild(a);return a});
-  const msg=document.createElement('p');msg.className='muted';msg.textContent='La corrección debe ser revisada y aceptada antes de modificar Supabase o publicar.';panel.appendChild(msg);
-  const ask=document.createElement('button');ask.className='primary';ask.textContent='Solicitar revisión y aprobación';panel.appendChild(ask);
-  ask.onclick=()=>{
-   const [en,es,pron]=inputs.map(x=>x.value.trim());
-   if(!en||!es){msg.textContent='Inglés y español son obligatorios.';return}
-   const request='MR.ORBEA · CORRECCIÓN PENDIENTE. Diálogo: '+original.dialogue+', turno '+original.step+', hablante '+original.speaker+', ID '+original.id+'. ORIGINAL: EN '+original.en+'; ES '+original.es+'; pronunciación '+original.pron+'. PROPUESTA: EN '+en+'; ES '+es+'; pronunciación '+pron+'. Audita gramática, sentido, naturalidad, pronunciación y coherencia con el contexto. Comprueba duplicados y referencias antes de proponer la versión final. SOLICITA MI APROBACIÓN EXPRESA. NO GUARDES NI PUBLIQUES todavía.';
-   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(request).then(()=>{msg.textContent='Solicitud copiada. Pégala en el chat de Bernardo para revisarla. Nada se ha guardado.'}).catch(()=>{msg.textContent='Copia manualmente la propuesta para revisarla con Bernardo.'})}
-   else{const ta=document.createElement('textarea');ta.value=request;ta.rows=5;panel.appendChild(ta);msg.textContent='Copia este texto y envíalo a Bernardo.'}
+  const h=document.createElement('h3');h.textContent='Editar y aprobar esta intervención';panel.appendChild(h);
+  const inputs=[['Inglés',p.en],['Español',p.es],['Pronunciación',p.pron||'']].map(([label,value])=>{const l=document.createElement('label');l.textContent=label;panel.appendChild(l);const a=document.createElement('textarea');a.rows=2;a.value=value;panel.appendChild(a);return a});
+  const status=document.createElement('p');status.className='muted';status.textContent='Solo se actualizará esta intervención. Se conservará su versión anterior.';panel.appendChild(status);
+  const save=document.createElement('button');save.className='primary';save.textContent='✓ Aprobar y guardar en este iPhone';
+  save.onclick=()=>{
+   const [en,es,pron]=inputs.map(i=>i.value.trim());
+   if(!en||!es){status.textContent='Completa inglés y español.';return}
+   if(en===p.en&&es===p.es&&pron===(p.pron||'')){status.textContent='No hay cambios que guardar.';return}
+   if(!confirm('¿Apruebas esta corrección para el diálogo '+active.title+'?'))return;
+   try{saveEdit(active.id,step,{en,es,pron});renderTurn()}catch(e){status.textContent='No se pudo guardar: '+e.message}
   };
+  panel.appendChild(save);
   const cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.onclick=()=>panel.remove();panel.appendChild(cancel);
-  body.querySelector('#dialogCorrectionPanel')?.remove();
-  body.querySelector('#dialogCorrect').parentElement.after(panel);
+  body.querySelector('#dialogCorrectionPanel')?.remove();body.querySelector('#dialogCorrect').closest('.card').after(panel);
+ };
+ body.querySelector('#dialogBernardo').onclick=()=>{
+  stopAudio();
+  const request='Bernardo, en MR.ORBEA necesito 2 opciones mejores para la frase '+t.id+' en '+active.title+', turno '+(step+1)+'. Original: '+p.en+' / '+p.es+'. Revisa naturalidad, significado, pronunciación y continuidad. Solicita mi aprobación y luego registra la versión aprobada en Supabase.';
+  const panel=document.createElement('div');panel.className='card';panel.id='bernardoConsultPanel';
+  const h=document.createElement('h3');h.textContent='Consultar a Bernardo';panel.appendChild(h);
+  const msg=document.createElement('p');msg.className='muted';msg.textContent='La generación automática dentro de la app todavía necesita conexión con un servicio de IA. Puedes enviar esta consulta a ChatGPT sin copiarla manualmente.';panel.appendChild(msg);
+  const b=document.createElement('button');b.className='primary';b.textContent='Abrir consulta en ChatGPT';
+  b.onclick=()=>{window.open('https://chatgpt.com/?q='+encodeURIComponent(request),'_blank','noopener')};
+  panel.appendChild(b);
+  const cancel=document.createElement('button');cancel.textContent='Cancelar';cancel.onclick=()=>panel.remove();panel.appendChild(cancel);
+  body.querySelector('#bernardoConsultPanel')?.remove();body.querySelector('#dialogBernardo').closest('.card').after(panel);
  };
  body.querySelector('#dialogListen').onclick=speak;
  body.querySelector('#dialogStop').onclick=stopAudio;
