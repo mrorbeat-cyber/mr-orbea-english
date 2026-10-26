@@ -13,6 +13,7 @@ scenarios.push({"id":"roger-cash-accepted","cat":"Banco y pagos","title":"Roger 
 scenarios.push({"id":"roger-cash-transfer","cat":"Banco y pagos","title":"Roger · Transferencia o Zelle","description":"Explicar por qué necesitas depósito en efectivo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":112,"who":"Empleado"},{"id":113,"who":"Tú"},{"id":114,"who":"Tú"},{"id":115,"who":"Tú"},{"id":116,"who":"Tú"},{"id":117,"who":"Empleado"},{"id":79,"who":"Tú"}]});
 scenarios.push({"id":"roger-cash-receipt","cat":"Banco y pagos","title":"Roger · Verificar comprobante","description":"Comparar comprobante previo y pedir uno nuevo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":118,"who":"Tú"},{"id":119,"who":"Tú"},{"id":120,"who":"Empleado"},{"id":121,"who":"Tú"},{"id":109,"who":"Tú"},{"id":73,"who":"Empleado"},{"id":122,"who":"Tú"},{"id":123,"who":"Empleado"},{"id":124,"who":"Tú"}]});
 scenarios.push({"id":"roger-cash-refused","cat":"Banco y pagos","title":"Roger · Depósito rechazado","description":"Consultar alternativas con el dueño de la casa.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":125,"who":"Empleado"},{"id":126,"who":"Tú"},{"id":127,"who":"Empleado"},{"id":128,"who":"Tú"},{"id":129,"who":"Tú"}]});
+// Manager · Tareas adicionales: turno 6 aprobado como ID 153 (histórico ID 050 preservado en Supabase).
 // Approved manager scenarios are synchronized from Supabase; no local copies needed.
 const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
 function loadMyDialogues(){
