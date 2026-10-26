@@ -80,7 +80,6 @@ const oldSync=syncSupabase;syncSupabase=async function(){let n=await oldSync();s
 const work=document.getElementById('work'), special=document.getElementById('special');
 const tools=document.createElement('div');tools.className='card';tools.innerHTML='<div class="grid"><button onclick="openEditor()" class="primary">＋ Nueva frase</button><button onclick="manageCategories()">⚙ Categorías</button></div><label>Ordenar frases</label><select id="sortMode" onchange="setSortMode(this.value)"><option value="new">Más recientes primero</option><option value="old">Más antiguas primero</option><option value="az">A–Z (inglés)</option><option value="za">Z–A (inglés)</option></select><label>Categoría</label><select id="workCategory" onchange="activeCategory=this.value;renderList()"><option value="">Todas las categorías</option></select>';
 work.insertBefore(tools,document.getElementById('search'));
-const specialTools=document.createElement('div');specialTools.className='card';specialTools.innerHTML='<div class="grid"><button class="primary" onclick="openEditor(null,\'special\')">＋ Nueva frase</button><button onclick="manageCategories()">＋ Categoría</button></div>';special.insertBefore(specialTools,document.getElementById('categories'));
 const oldOpen=openPhrase;openPhrase=function(id){oldOpen(id);document.getElementById('return').onclick=()=>activeFolder==='special'?showSpecialCategory(activeCategory):showWork();document.getElementById('favoriteBtn').textContent=isFav(id)?'★ Quitar favorita':'☆ Guardar favorita'};
 const favoriteBtn=document.createElement('button');favoriteBtn.id='favoriteBtn';favoriteBtn.className='primary';favoriteBtn.style.width='100%';favoriteBtn.textContent='☆ Guardar favorita';favoriteBtn.onclick=()=>{if(!current)return;let key='mrorbea-fav-'+current.id;localStorage.setItem(key,isFav(current.id)?'0':'1');favoriteBtn.textContent=isFav(current.id)?'★ Quitar favorita':'☆ Guardar favorita'};
 const phraseCard=document.getElementById('english').closest('.card');phraseCard.appendChild(favoriteBtn);
@@ -186,7 +185,7 @@ showLibrary=function(){oldShowLibrary();const body=document.getElementById('extr
   showSpecial=function(){oldShowSpecial();refreshApproved()};
 })();
 </script>
-<script src="./dialogues.js?v=20261026-supabase-sync-1"></script>
+<script src="./dialogues.js?v=20261026-clean-window2"></script>
 <script>
 /* Update installed MR.ORBEA without altering the approved design. */
 if('serviceWorker' in navigator){
