@@ -13,6 +13,7 @@ scenarios.push({"id":"roger-cash-accepted","cat":"Banco y pagos","title":"Roger 
 scenarios.push({"id":"roger-cash-transfer","cat":"Banco y pagos","title":"Roger · Transferencia o Zelle","description":"Explicar por qué necesitas depósito en efectivo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":112,"who":"Empleado"},{"id":113,"who":"Tú"},{"id":114,"who":"Tú"},{"id":115,"who":"Tú"},{"id":116,"who":"Tú"},{"id":117,"who":"Empleado"},{"id":79,"who":"Tú"}]});
 scenarios.push({"id":"roger-cash-receipt","cat":"Banco y pagos","title":"Roger · Verificar comprobante","description":"Comparar comprobante previo y pedir uno nuevo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":118,"who":"Tú"},{"id":119,"who":"Tú"},{"id":120,"who":"Empleado"},{"id":121,"who":"Tú"},{"id":109,"who":"Tú"},{"id":73,"who":"Empleado"},{"id":122,"who":"Tú"},{"id":123,"who":"Empleado"},{"id":124,"who":"Tú"}]});
 scenarios.push({"id":"roger-cash-refused","cat":"Banco y pagos","title":"Roger · Depósito rechazado","description":"Consultar alternativas con el dueño de la casa.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":125,"who":"Empleado"},{"id":126,"who":"Tú"},{"id":127,"who":"Empleado"},{"id":128,"who":"Tú"},{"id":129,"who":"Tú"}]});
+// Approved manager scenarios are synchronized from Supabase; no local copies needed.
 const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
 function loadMyDialogues(){
  try{
@@ -127,13 +128,25 @@ function showTopic(topic){
  const matches=visibleDialogues().filter(d=>topicOf(d)===topic);
  document.getElementById('extraTitle').textContent=topic;
  document.getElementById('extraBody').innerHTML='<button id="dialogBackMenu">← Temas</button>'+
- (topic==='Banco y pagos'?
+ (topic==='Trabajo'?
+ '<button class="phrase" id="managerGroup"><strong>📁 Coordinación con manager</strong><small>6 situaciones · prioridades, proveedores, scanner, pedidos y front end</small></button>'+
+ matches.filter(d=>!d.id.startsWith('manager-')).map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title)+'</strong><small>'+d.turns.length+' intervenciones</small></button>').join(''):
+ topic==='Banco y pagos'?
  '<button class="phrase" id="rogerGroup"><strong>📁 Depósito en efectivo para Roger</strong><small>4 situaciones · aceptado, transferencia/Zelle, comprobante y rechazo</small></button>'+
  matches.filter(d=>!d.id.startsWith('roger-cash-')).map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title)+'</strong><small>'+d.turns.length+' intervenciones</small></button>').join(''):
  matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Walgreens · /,''))+'</strong><small>'+d.turns.length+' intervenciones · '+safe(d.description||'')+'</small></button>').join(''));
  document.getElementById('extraBody').querySelector('#dialogBackMenu').onclick=renderMenu;
  const roger=document.getElementById('extraBody').querySelector('#rogerGroup');if(roger)roger.onclick=showRoger;
+ const mgr=document.getElementById('extraBody').querySelector('#managerGroup');if(mgr)mgr.onclick=showManager;
  document.getElementById('extraBody').querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
+ show('extras');
+}
+function showManager(){
+ const matches=visibleDialogues().filter(d=>d.id.startsWith('manager-'));
+ document.getElementById('extraTitle').textContent='Coordinación con manager';
+ document.getElementById('extraBody').innerHTML='<button id="managerBack">← Trabajo</button>'+matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Manager · /,''))+'</strong><small>'+d.turns.length+' intervenciones</small></button>').join('');
+ document.getElementById('managerBack').onclick=()=>showTopic('Trabajo');
+ document.querySelectorAll('#extraBody [data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
  show('extras');
 }
 function showRoger(){
