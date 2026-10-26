@@ -5,6 +5,72 @@ const scenarios=[
  {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]},
  {id:'bank-deposit',cat:'Banco y pagos',title:'Depósito desde cuenta de cheques',description:'Conversar sobre retiro de efectivo o transferencia desde tu cuenta.',turns:[{id:5,who:'Empleado'},{id:56,who:'Tú'},{id:71,who:'Empleado'},{id:72,who:'Tú'},{id:73,who:'Empleado'}]}
 ];
+const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
+function loadMyDialogues(){
+ try{
+  const arr=JSON.parse(localStorage.getItem(LOCAL_DIALOGUES_KEY)||'[]');
+  if(Array.isArray(arr))arr.forEach(d=>{
+   if(d&&typeof d.id==='string'&&d.id.startsWith('mine-')&&Array.isArray(d.turns)&&d.turns.length>=2&&d.turns.every(t=>Number.isInteger(t.id)&&typeof t.who==='string')&&!scenarios.some(x=>x.id===d.id))
+    scenarios.push({id:d.id,cat:String(d.cat||'Personal'),title:String(d.title||'Mi diálogo'),description:'Creado en este iPhone',turns:d.turns});
+  });
+ }catch(e){console.warn('No se pudieron recuperar diálogos locales',e)}
+}
+loadMyDialogues();
+let builderTurns=[];
+function editDialogue(){
+ stopAudio();builderTurns=[];renderBuilder();
+}
+function renderBuilder(){
+ const body=document.getElementById('extraBody');
+ document.getElementById('extraTitle').textContent='Crear diálogo';
+ const choices=phrases.filter(p=>p.en&&p.es).sort((a,b)=>Number(a.id)-Number(b.id));
+ if(!choices.length){body.textContent='Primero sincroniza tus frases aprobadas desde Supabase.';show('extras');return}
+ const currentTitle=body.querySelector('#myDialogueTitle')?.value||'Mi nuevo diálogo';
+ const currentCat=body.querySelector('#myDialogueCategory')?.value||'Trabajo';
+ const categories=[...new Set(choices.map(p=>p.cat).filter(Boolean))];
+ body.innerHTML='<button id="dlgBack">← Diálogos reales</button>'+
+ '<div class="card"><h2>Constructor de diálogos</h2><p class="muted">Selecciona frases aprobadas. No se mueven ni se duplican. Esta versión guarda el diálogo en este dispositivo.</p>'+
+ '<label>Título</label><input id="myDialogueTitle" maxlength="100">'+
+ '<label>Categoría</label><select id="myDialogueCategory"></select>'+
+ '<label>Frase aprobada</label><select id="myDialoguePhrase"></select>'+
+ '<label>Quién habla</label><select id="myDialogueSpeaker"><option value="Tú">Tú</option><option value="Interlocutor">Interlocutor</option></select>'+
+ '<button class="primary" id="dlgAdd">＋ Agregar intervención</button></div>'+
+ '<div class="card"><h2>Secuencia ('+builderTurns.length+')</h2><div id="dlgSequence"></div></div>'+
+ '<button class="primary" id="dlgSave">Guardar diálogo en este iPhone</button><p class="muted">Tus frases oficiales no se modifican. Para compartir diálogos entre dispositivos necesitaríamos sincronizarlos después.</p>';
+ body.querySelector('#myDialogueTitle').value=currentTitle;
+ const cats=body.querySelector('#myDialogueCategory');
+ categories.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cats.appendChild(o)});
+ cats.value=categories.includes(currentCat)?currentCat:categories[0];
+ const select=body.querySelector('#myDialoguePhrase');
+ choices.forEach(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=String(p.id).padStart(3,'0')+' · '+p.en;select.appendChild(o)});
+ const list=body.querySelector('#dlgSequence');
+ builderTurns.forEach((turn,i)=>{
+   const p=phrase(turn),line=document.createElement('div');line.className='card';
+   const title=document.createElement('strong');title.textContent=(i+1)+'. '+turn.who+' · '+(p?p.en:'Frase no encontrada');line.appendChild(title);
+   const controls=document.createElement('div');controls.className='grid';
+   [['↑',()=>{if(i>0){[builderTurns[i-1],builderTurns[i]]=[builderTurns[i],builderTurns[i-1]];captureAndRender()}}],['↓',()=>{if(i<builderTurns.length-1){[builderTurns[i+1],builderTurns[i]]=[builderTurns[i],builderTurns[i+1]];captureAndRender()}}],['Quitar',()=>{builderTurns.splice(i,1);captureAndRender()}]].forEach(([label,fn])=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;controls.appendChild(b)});
+   line.appendChild(controls);list.appendChild(line);
+ });
+ function captureAndRender(){renderBuilderWith(currentTitleNode.value,catNode.value)}
+ const currentTitleNode=body.querySelector('#myDialogueTitle'),catNode=body.querySelector('#myDialogueCategory');
+ function renderBuilderWith(title,cat){renderBuilder();body.querySelector('#myDialogueTitle').value=title;body.querySelector('#myDialogueCategory').value=cat}
+ body.querySelector('#dlgBack').onclick=renderMenu;
+ body.querySelector('#dlgAdd').onclick=()=>{
+  const id=Number(select.value);if(!phrase({id}))return;
+  builderTurns.push({id,who:body.querySelector('#myDialogueSpeaker').value});renderBuilderWith(currentTitleNode.value,catNode.value)
+ };
+ body.querySelector('#dlgSave').onclick=()=>{
+  const title=currentTitleNode.value.trim();
+  if(!title||builderTurns.length<2){alert('Escribe un título y agrega al menos dos intervenciones.');return}
+  const mine=scenarios.filter(x=>x.id.startsWith('mine-'));
+  const id='mine-'+Date.now();
+  const entry={id,title,cat:catNode.value,description:'Creado en este iPhone',turns:builderTurns.map(t=>({...t}))};
+  mine.push(entry);
+  try{localStorage.setItem(LOCAL_DIALOGUES_KEY,JSON.stringify(mine))}catch(e){alert('No se pudo guardar en el dispositivo.');return}
+  scenarios.push(entry);renderMenu();
+ };
+ show('extras');
+}
 let active=null,step=0,showSpanish=true,showPron=false,hideAnswer=false,speed=0.9;
 function available(d){return d.turns.every(t=>phrases.some(p=>Number(p.id)===t.id))}
 function phrase(t){return phrases.find(p=>Number(p.id)===t.id)}
@@ -14,8 +80,9 @@ function renderMenu(){
  const root=document.getElementById('categories');
  const have=scenarios.filter(available);
  document.querySelector('#special .title').textContent='Diálogos reales';
- root.innerHTML='<div class="card"><h2>Aprende a conversar</h2><p class="muted">Practica preguntas y respuestas reales con frases aprobadas. Aquí no aparece la antigua biblioteca ni categorías vacías.</p></div>'+
+ root.innerHTML='<div class="card"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button></div><div class="card"><h2>Aprende a conversar</h2><p class="muted">Practica preguntas y respuestas reales con frases aprobadas. Aquí no aparece la antigua biblioteca ni categorías vacías.</p></div>'+
  (have.length?have.map(d=>'<button class="category" data-dialog-id="'+d.id+'">💬 '+d.title+' <small>· '+d.turns.length+' intervenciones aprobadas</small></button>').join(''):'<div class="card"><p>Sin diálogos disponibles. Verifica la sincronización de Supabase.</p></div>');
+ root.querySelector('#dlgCreate').onclick=editDialogue;
  root.querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
  show('special');
 }
