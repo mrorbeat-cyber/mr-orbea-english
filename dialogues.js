@@ -5,15 +5,7 @@ const scenarios=[
  {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]},
  {id:'bank-deposit',cat:'Banco y pagos',title:'Depósito desde cuenta de cheques',description:'Conversar sobre retiro de efectivo o transferencia desde tu cuenta.',turns:[{id:5,who:'Empleado'},{id:56,who:'Tú'},{id:71,who:'Empleado'},{id:72,who:'Tú'},{id:73,who:'Empleado'}]}
 ];
-/* Practice-only scripted scenario; NOT part of approved phrase library. */
-scenarios.push({id:'walgreens-practice',cat:'Salud y farmacia',title:'Walgreens · Recoger una receta',description:'Guion de práctica propuesto; no aprobado ni guardado como frases.',draft:true,turns:[
- {id:'W1',who:'Farmacia',en:'Hi! How can I help you?',es:'¡Hola! ¿En qué puedo ayudarte?',pron:'Jái! Jáu ken ai jelp yu?'},
- {id:'W2',who:'Tú',en:"Hi, I'm here to pick up a prescription.",es:'Hola, vengo a recoger una receta médica.',pron:'Jái, aim jíer tu pik ap a priskríp-shon.'},
- {id:'W3',who:'Farmacia',en:"Sure. What's your date of birth?",es:'Claro. ¿Cuál es tu fecha de nacimiento?',pron:'Shur. Uáts yor déit ov berth?'},
- {id:'W4',who:'Tú',en:"It's [month, day, year].",es:'Es [mes, día y año].',pron:'Its [month, déi, yíer].'},
- {id:'W5',who:'Farmacia',en:"Thanks. Let me check if it's ready.",es:'Gracias. Déjame comprobar si está lista.',pron:'Thánks. Let mi chek if its rédi.'},
- {id:'W6',who:'Tú',en:'Thank you.',es:'Gracias.',pron:'Thánk yu.'}
-]});
+scenarios.push({id:'walgreens-prescription',cat:'Salud y farmacia',title:'Walgreens · Recoger una receta',description:'Recoger una receta médica en Walgreens.',turns:[{id:74,who:'Empleado'},{id:75,who:'Tú'},{id:76,who:'Empleado'},{id:77,who:'Tú'},{id:78,who:'Empleado'},{id:79,who:'Tú'}]});
 const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
 function loadMyDialogues(){
  try{
