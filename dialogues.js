@@ -169,7 +169,7 @@ function renderTurn(){
  '<p class="muted">'+active.title+' · Turno '+(step+1)+' de '+active.turns.length+(active.draft?' · Propuesta pendiente de tu revisión':'')+'</p>'+
  '<div class="card"><small>'+t.who+' · '+(active.draft?'PROPUESTA PARA PRACTICAR · NO APROBADA':'Frase '+String(t.id).padStart(3,'0')+' · Aprobada')+'</small>'+
  (hideAnswer&&t.who==='Tú'?'<h2>Intenta decir tu frase antes de verla</h2><button id="dialogReveal">Mostrar respuesta</button>':'<h2 id="dialogEnglish"></h2>'+(showSpanish?'<p id="dialogSpanish" class="muted"></p>':'')+(showPron?'<p id="dialogPron" class="muted"></p>':''))+'</div>'+
- '<div class="card"><button id="dialogCorrect">✎ Corregir esta frase</button><p class="muted">Solicita revisión y aprobación antes de guardar una nueva versión. La frase oficial permanece intacta.</p></div>'+
+ '<div class="card"><div class="grid"><button id="dialogCorrect" class="primary">✎ Corregir frase</button><button id="dialogBernardo">💬 Consultar a Bernardo</button></div><p class="muted">Solicita revisión y aprobación antes de guardar una nueva versión. La frase oficial permanece intacta.</p></div>'+
  '<div class="card"><div class="grid"><button id="dialogListen" class="primary">▶ Escuchar</button><button id="dialogStop">■ Detener</button></div>'+
  '<label>Velocidad</label><select id="dialogSpeed"><option value="0.75">Lenta</option><option value="0.9">Normal</option><option value="1.05">Rápida</option></select></div>'+
  '<div class="card"><label><input type="checkbox" id="dialogSpanishToggle"> Español</label> <label><input type="checkbox" id="dialogPronToggle"> Pronunciación</label><label><input type="checkbox" id="dialogHideToggle"> Ocultar mis respuestas</label></div>'+
@@ -180,6 +180,16 @@ function renderTurn(){
  body.querySelector('#dialogBackCategory').onclick=()=>showCategory(active.cat);
  const reveal=body.querySelector('#dialogReveal');if(reveal)reveal.onclick=()=>{hideAnswer=false;renderTurn()};
 
+ body.querySelector('#dialogBernardo').onclick=()=>{
+  stopAudio();
+  const request='Bernardo, revisa esta frase de MR.ORBEA, diálogo '+active.title+', turno '+(step+1)+', hablante '+t.who+', ID '+t.id+': Inglés: '+p.en+'; Español: '+p.es+'; pronunciación: '+(p.pron||'pendiente')+'. Propón inglés americano fácil y natural, comprueba significado, pronunciación y continuidad del diálogo. No guardes ni publiques hasta mi aprobación.';
+  const box=document.createElement('div');box.className='card';box.id='bernardoConsultPanel';
+  const label=document.createElement('p');label.textContent='Consulta preparada. Copia el mensaje y pégalo en este chat con Bernardo.';box.appendChild(label);
+  const ta=document.createElement('textarea');ta.rows=5;ta.value=request;box.appendChild(ta);
+  const copy=document.createElement('button');copy.className='primary';copy.textContent='Copiar consulta';
+  copy.onclick=()=>{ta.select();if(navigator.clipboard?.writeText)navigator.clipboard.writeText(ta.value).then(()=>{label.textContent='Consulta copiada. Ahora pégala en ChatGPT.'}).catch(()=>{label.textContent='Selecciona el texto y cópialo manualmente.'});else label.textContent='Selecciona el texto y cópialo manualmente.'};
+  box.appendChild(copy);body.querySelector('#bernardoConsultPanel')?.remove();body.querySelector('#dialogBernardo').closest('.card').after(box);
+ };
  body.querySelector('#dialogCorrect').onclick=()=>{
   stopAudio();
   const original={id:t.id,en:p.en,es:p.es,pron:p.pron||'',speaker:t.who,dialogue:active.title,step:step+1};
