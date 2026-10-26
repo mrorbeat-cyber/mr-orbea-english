@@ -9,6 +9,10 @@ scenarios.push({id:'walgreens-prescription',cat:'Salud y farmacia',title:'Walgre
 scenarios.push({"id":"walgreens-ready","title":"Walgreens · Está lista","cat":"Salud y farmacia","description":"Recoger, pagar y despedirse.","turns":[{"id":74,"who":"Empleado"},{"id":75,"who":"Tú"},{"id":76,"who":"Empleado"},{"id":77,"who":"Tú"},{"id":78,"who":"Empleado"},{"id":80,"who":"Empleado"},{"id":81,"who":"Tú"},{"id":82,"who":"Empleado"},{"id":83,"who":"Tú"},{"id":84,"who":"Empleado"},{"id":85,"who":"Tú"},{"id":86,"who":"Empleado"},{"id":79,"who":"Tú"}]});
 scenarios.push({"id":"walgreens-pending","title":"Walgreens · Aún no está lista","cat":"Salud y farmacia","description":"Preguntar cuándo regresar y despedirse.","turns":[{"id":74,"who":"Empleado"},{"id":75,"who":"Tú"},{"id":76,"who":"Empleado"},{"id":77,"who":"Tú"},{"id":78,"who":"Empleado"},{"id":87,"who":"Empleado"},{"id":88,"who":"Tú"},{"id":89,"who":"Empleado"},{"id":90,"who":"Tú"},{"id":91,"who":"Empleado"},{"id":92,"who":"Tú"}]});
 scenarios.push({"id":"walgreens-partial","title":"Walgreens · Entrega parcial","cat":"Salud y farmacia","description":"Recoger lo disponible y consultar lo pendiente.","turns":[{"id":74,"who":"Empleado"},{"id":75,"who":"Tú"},{"id":76,"who":"Empleado"},{"id":77,"who":"Tú"},{"id":78,"who":"Empleado"},{"id":93,"who":"Empleado"},{"id":94,"who":"Tú"},{"id":95,"who":"Empleado"},{"id":96,"who":"Tú"},{"id":97,"who":"Empleado"},{"id":98,"who":"Tú"},{"id":99,"who":"Empleado"},{"id":83,"who":"Tú"},{"id":84,"who":"Empleado"},{"id":100,"who":"Tú"},{"id":101,"who":"Empleado"},{"id":79,"who":"Tú"}]});
+scenarios.push({"id":"roger-cash-accepted","cat":"Banco y pagos","title":"Roger · Depósito aceptado","description":"Retirar efectivo, verificar cuenta y recibir comprobante.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":71,"who":"Empleado"},{"id":72,"who":"Tú"},{"id":105,"who":"Empleado"},{"id":106,"who":"Tú"},{"id":102,"who":"Empleado"},{"id":103,"who":"Tú"},{"id":104,"who":"Empleado"},{"id":107,"who":"Tú"},{"id":108,"who":"Empleado"},{"id":103,"who":"Tú"},{"id":109,"who":"Tú"},{"id":73,"who":"Empleado"},{"id":85,"who":"Tú"},{"id":110,"who":"Empleado"},{"id":111,"who":"Tú"}]});
+scenarios.push({"id":"roger-cash-transfer","cat":"Banco y pagos","title":"Roger · Transferencia o Zelle","description":"Explicar por qué necesitas depósito en efectivo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":112,"who":"Empleado"},{"id":113,"who":"Tú"},{"id":114,"who":"Tú"},{"id":115,"who":"Tú"},{"id":116,"who":"Tú"},{"id":117,"who":"Empleado"},{"id":79,"who":"Tú"}]});
+scenarios.push({"id":"roger-cash-receipt","cat":"Banco y pagos","title":"Roger · Verificar comprobante","description":"Comparar comprobante previo y pedir uno nuevo.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":118,"who":"Tú"},{"id":119,"who":"Tú"},{"id":120,"who":"Empleado"},{"id":121,"who":"Tú"},{"id":109,"who":"Tú"},{"id":73,"who":"Empleado"},{"id":122,"who":"Tú"},{"id":123,"who":"Empleado"},{"id":124,"who":"Tú"}]});
+scenarios.push({"id":"roger-cash-refused","cat":"Banco y pagos","title":"Roger · Depósito rechazado","description":"Consultar alternativas con el dueño de la casa.","turns":[{"id":5,"who":"Empleado"},{"id":56,"who":"Tú"},{"id":125,"who":"Empleado"},{"id":126,"who":"Tú"},{"id":127,"who":"Empleado"},{"id":128,"who":"Tú"},{"id":129,"who":"Tú"}]});
 const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
 function loadMyDialogues(){
  try{
@@ -123,9 +127,21 @@ function showTopic(topic){
  const matches=visibleDialogues().filter(d=>topicOf(d)===topic);
  document.getElementById('extraTitle').textContent=topic;
  document.getElementById('extraBody').innerHTML='<button id="dialogBackMenu">← Temas</button>'+
- matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Walgreens · /,''))+'</strong><small>'+d.turns.length+' intervenciones · '+safe(d.description||'')+'</small></button>').join('');
+ (topic==='Banco y pagos'?
+ '<button class="phrase" id="rogerGroup"><strong>📁 Depósito en efectivo para Roger</strong><small>4 situaciones · aceptado, transferencia/Zelle, comprobante y rechazo</small></button>'+
+ matches.filter(d=>!d.id.startsWith('roger-cash-')).map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title)+'</strong><small>'+d.turns.length+' intervenciones</small></button>').join(''):
+ matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Walgreens · /,''))+'</strong><small>'+d.turns.length+' intervenciones · '+safe(d.description||'')+'</small></button>').join(''));
  document.getElementById('extraBody').querySelector('#dialogBackMenu').onclick=renderMenu;
+ const roger=document.getElementById('extraBody').querySelector('#rogerGroup');if(roger)roger.onclick=showRoger;
  document.getElementById('extraBody').querySelectorAll('[data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
+ show('extras');
+}
+function showRoger(){
+ const matches=visibleDialogues().filter(d=>d.id.startsWith('roger-cash-'));
+ document.getElementById('extraTitle').textContent='Depósito en efectivo para Roger';
+ document.getElementById('extraBody').innerHTML='<button id="rogerBack">← Banco y pagos</button>'+matches.map(d=>'<button class="phrase" data-dialog-id="'+safe(d.id)+'"><strong>'+safe(d.title.replace(/^Roger · /,''))+'</strong><small>'+d.turns.length+' intervenciones</small></button>').join('');
+ document.getElementById('rogerBack').onclick=()=>showTopic('Banco y pagos');
+ document.querySelectorAll('#extraBody [data-dialog-id]').forEach(el=>el.onclick=()=>start(el.dataset.dialogId));
  show('extras');
 }
 function showCategory(cat){showTopic(cat==='Salud y farmacia'?'Walgreens':cat)}
