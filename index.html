@@ -185,11 +185,11 @@ showLibrary=function(){oldShowLibrary();const body=document.getElementById('extr
   showSpecial=function(){oldShowSpecial();refreshApproved()};
 })();
 </script>
-<script src="./dialogues.js?v=20261026-correction"></script>
+<script src="./dialogues.js?v=20261026-bernardo-fix2"></script>
 <script>
 /* Update installed MR.ORBEA without altering the approved design. */
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js?v=20261025-dialogos-2',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+  navigator.serviceWorker.register('./sw.js?v=20261026-bernardo-fix2',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
 }
 </script>
 </body></html>
