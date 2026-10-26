@@ -5,6 +5,15 @@ const scenarios=[
  {id:'aisle6',cat:'Trabajo',title:'Productos duplicados · Pasillo 6',description:'Pedir ayuda a un compañero para revisar productos mal ubicados.',turns:[{id:54,who:'Tú'},{id:69,who:'Compañero'},{id:46,who:'Tú'},{id:70,who:'Compañero'}]},
  {id:'bank-deposit',cat:'Banco y pagos',title:'Depósito desde cuenta de cheques',description:'Conversar sobre retiro de efectivo o transferencia desde tu cuenta.',turns:[{id:5,who:'Empleado'},{id:56,who:'Tú'},{id:71,who:'Empleado'},{id:72,who:'Tú'},{id:73,who:'Empleado'}]}
 ];
+/* Practice-only scripted scenario; NOT part of approved phrase library. */
+scenarios.push({id:'walgreens-practice',cat:'Salud y farmacia',title:'Walgreens · Recoger una receta',description:'Guion de práctica propuesto; no aprobado ni guardado como frases.',draft:true,turns:[
+ {id:'W1',who:'Farmacia',en:'Hi! How can I help you?',es:'¡Hola! ¿En qué puedo ayudarte?',pron:'Jái! Jáu ken ai jelp yu?'},
+ {id:'W2',who:'Tú',en:"Hi, I'm here to pick up a prescription.",es:'Hola, vengo a recoger una receta médica.',pron:'Jái, aim jíer tu pik ap a priskríp-shon.'},
+ {id:'W3',who:'Farmacia',en:"Sure. What's your date of birth?",es:'Claro. ¿Cuál es tu fecha de nacimiento?',pron:'Shur. Uáts yor déit ov berth?'},
+ {id:'W4',who:'Tú',en:"It's [month, day, year].",es:'Es [mes, día y año].',pron:'Its [month, déi, yíer].'},
+ {id:'W5',who:'Farmacia',en:"Thanks. Let me check if it's ready.",es:'Gracias. Déjame comprobar si está lista.',pron:'Thánks. Let mi chek if its rédi.'},
+ {id:'W6',who:'Tú',en:'Thank you.',es:'Gracias.',pron:'Thánk yu.'}
+]});
 const LOCAL_DIALOGUES_KEY='mrorbea-dialogues-local-v1';
 function loadMyDialogues(){
  try{
@@ -57,7 +66,11 @@ function renderBuilder(){
  categories.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cats.appendChild(o)});
  cats.value=categories.includes(currentCat)?currentCat:categories[0];
  const select=body.querySelector('#myDialoguePhrase');
- choices.forEach(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=String(p.id).padStart(3,'0')+' · '+p.en;select.appendChild(o)});
+ function filterChoices(){const candidates=choices.filter(p=>p.cat===cats.value);select.innerHTML='';candidates.forEach(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=String(p.id).padStart(3,'0')+' · '+p.en;select.appendChild(o)});if(!candidates.length){const o=document.createElement('option');o.textContent='No hay frases aprobadas en esta categoría';o.value='';select.appendChild(o)}}
+ cats.onchange=filterChoices;
+ /* legacy list intentionally replaced by category filtering */
+ /* choices.forEach(p=>{const o=document.createElement('option');o.value=String(p.id);o.textContent=String(p.id).padStart(3,'0')+' · '+p.en;select.appendChild(o)}); */
+ filterChoices();
  const list=body.querySelector('#dlgSequence');
  builderTurns.forEach((turn,i)=>{
    const p=phrase(turn),line=document.createElement('div');line.className='card';
@@ -87,13 +100,13 @@ function renderBuilder(){
  show('extras');
 }
 let active=null,step=0,showSpanish=true,showPron=false,hideAnswer=false,speed=0.9;
-function available(d){return d.turns.every(t=>phrases.some(p=>Number(p.id)===t.id))}
-function phrase(t){return phrases.find(p=>Number(p.id)===t.id)}
+function available(d){return d.turns.every(t=>t.en&&t.es||phrases.some(p=>Number(p.id)===t.id))}
+function phrase(t){return t.en&&t.es?{en:t.en,es:t.es,pron:t.pron||'',id:t.id}:phrases.find(p=>Number(p.id)===t.id)}
 function stopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel()}
 function speak(){stopAudio();if(!('speechSynthesis' in window))return;let p=phrase(active.turns[step]);if(!p)return;const u=new SpeechSynthesisUtterance(p.en);u.lang='en-US';u.rate=speed;window.speechSynthesis.speak(u)}
 function renderMenu(){
  const root=document.getElementById('categories');
- const have=scenarios.filter(available);
+ const have=scenarios.filter(d=>available(d)&&(!d.id.startsWith('mine-')||d.turns.every(t=>phrases.find(p=>Number(p.id)===t.id)?.cat===d.cat)));
  document.querySelector('#special .title').textContent='Diálogos reales';
  root.innerHTML='<div class="card"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button></div><div class="card"><h2>Aprende a conversar</h2><p class="muted">Practica preguntas y respuestas reales con frases aprobadas. Aquí no aparece la antigua biblioteca ni categorías vacías.</p></div>'+
  (have.length?have.map(d=>'<button class="category" data-dialog-id="'+d.id+'">💬 '+d.title+' <small>· '+d.turns.length+' intervenciones aprobadas</small></button>').join(''):'<div class="card"><p>Sin diálogos disponibles. Verifica la sincronización de Supabase.</p></div>');
@@ -118,8 +131,8 @@ function renderTurn(){
  if(!p){showCategory(active.cat);return}
  document.getElementById('extraTitle').textContent='Diálogo · '+active.cat;
  body.innerHTML='<button id="dialogBackCategory">← Volver a '+active.cat+'</button>'+
- '<p class="muted">'+active.title+' · Turno '+(step+1)+' de '+active.turns.length+'</p>'+
- '<div class="card"><small>'+t.who+' · Frase '+String(t.id).padStart(3,'0')+' · Aprobada</small>'+
+ '<p class="muted">'+active.title+' · Turno '+(step+1)+' de '+active.turns.length+(active.draft?' · Propuesta pendiente de tu revisión':'')+'</p>'+
+ '<div class="card"><small>'+t.who+' · '+(active.draft?'PROPUESTA PARA PRACTICAR · NO APROBADA':'Frase '+String(t.id).padStart(3,'0')+' · Aprobada')+'</small>'+
  (hideAnswer&&t.who==='Tú'?'<h2>Intenta decir tu frase antes de verla</h2><button id="dialogReveal">Mostrar respuesta</button>':'<h2 id="dialogEnglish"></h2>'+(showSpanish?'<p id="dialogSpanish" class="muted"></p>':'')+(showPron?'<p id="dialogPron" class="muted"></p>':''))+'</div>'+
  '<div class="card"><div class="grid"><button id="dialogListen" class="primary">▶ Escuchar</button><button id="dialogStop">■ Detener</button></div>'+
  '<label>Velocidad</label><select id="dialogSpeed"><option value="0.75">Lenta</option><option value="0.9">Normal</option><option value="1.05">Rápida</option></select></div>'+
