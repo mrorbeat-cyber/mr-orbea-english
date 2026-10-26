@@ -182,7 +182,7 @@ function renderTurn(){
  document.getElementById('extraTitle').textContent='Diálogo · '+active.cat;
  body.innerHTML='<button id="dialogBackCategory">← Volver a '+active.cat+'</button>'+
  '<p class="muted">'+active.title+' · Turno '+(step+1)+' de '+active.turns.length+(active.draft?' · Propuesta pendiente de tu revisión':'')+'</p>'+
- '<div class="card"><small>'+t.who+' · '+(active.draft?'PROPUESTA PARA PRACTICAR · NO APROBADA':'Frase '+String(t.id).padStart(3,'0')+' · Aprobada')+'</small>'+
+ '<div class="card"><small>'+t.who+' · '+(active.draft?'PROPUESTA PARA PRACTICAR · NO APROBADA':'Frase '+String(t.id).padStart(3,'0')+(readEdits()[active.id+':'+step]?' · Versión local aprobada':' · Aprobada'))+'</small>'+
  (hideAnswer&&t.who==='Tú'?'<h2>Intenta decir tu frase antes de verla</h2><button id="dialogReveal">Mostrar respuesta</button>':'<h2 id="dialogEnglish"></h2>'+(showSpanish?'<p id="dialogSpanish" class="muted"></p>':'')+(showPron?'<p id="dialogPron" class="muted"></p>':''))+'</div>'+
  '<div class="card"><div class="grid"><button id="dialogCorrect" class="primary">✎ Corregir frase</button><button id="dialogBernardo">💬 Consultar a Bernardo</button></div><p class="muted">Solicita revisión y aprobación antes de guardar una nueva versión. La frase oficial permanece intacta.</p></div>'+
  '<div class="card"><div class="grid"><button id="dialogListen" class="primary">▶ Escuchar</button><button id="dialogStop">■ Detener</button></div>'+
