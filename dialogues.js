@@ -20,9 +20,9 @@ function loadMyDialogues(){
  }catch(e){console.warn('No se pudieron recuperar diálogos locales',e)}
 }
 loadMyDialogues();
-async function syncApprovedDialogues(){
+async function syncApprovedDialogues(strict=false){
  const url=localStorage.getItem('mrorbea-sb-url'),key=localStorage.getItem('mrorbea-sb-key');
- if(!url||!key)return;
+ if(!url||!key){if(strict)throw Error('No hay conexión Supabase configurada');return 0;}
  try{
   const response=await fetch(url+'/rest/v1/dialogues?select=slug,title,category,description,turns&approved=eq.true&order=id.asc',{headers:{apikey:key,Authorization:'Bearer '+key},cache:'no-store'});
   if(!response.ok)throw Error('HTTP '+response.status);
@@ -31,7 +31,8 @@ async function syncApprovedDialogues(){
   const remote=rows.filter(d=>d&&typeof d.slug==='string'&&Array.isArray(d.turns)&&d.turns.length>=2&&d.turns.every(t=>Number.isInteger(Number(t.id))&&typeof t.who==='string')).map(d=>({id:d.slug,title:d.title,cat:d.category,description:d.description||'',turns:d.turns.map(t=>({id:Number(t.id),who:t.who}))}));
   remote.forEach(d=>{const index=scenarios.findIndex(x=>x.id===d.id);if(index>=0)scenarios[index]=d;else scenarios.push(d)});
   if(!document.getElementById('special').hidden)renderMenu();
- }catch(e){console.warn('Diálogos: se usan copias locales disponibles',e.message)}
+  return remote.length;
+ }catch(e){console.warn('Diálogos: se usan copias locales disponibles',e.message);if(strict)throw e;return 0;}
 }
 document.addEventListener('mrorbea-sync',()=>syncApprovedDialogues());
 syncApprovedDialogues();
@@ -110,10 +111,11 @@ function renderMenu(){
  const root=document.getElementById('categories');
  const items=visibleDialogues(),topics=[...new Set(items.map(topicOf))];
  document.querySelector('#special .title').textContent='Diálogos reales';
- root.innerHTML='<div class="card"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button></div>'+
+ root.innerHTML='<div class="card"><div class="grid"><button class="primary" id="dlgCreate">＋ Crear diálogo con mis frases</button><button id="dlgRefresh">⟳ Actualizar</button></div><p id="dlgRefreshStatus" class="muted" role="status">Actualiza frases y diálogos desde Supabase.</p></div>'+
  '<div class="card"><h2>Mis situaciones</h2><p class="muted">Elige un tema y después la conversación que quieras practicar.</p></div>'+
  topics.map(t=>'<button class="category" data-topic="'+safe(t)+'">📁 '+safe(t)+' <small>· '+items.filter(d=>topicOf(d)===t).length+' situaciones</small></button>').join('');
  root.querySelector('#dlgCreate').onclick=editDialogue;
+ root.querySelector('#dlgRefresh').onclick=async()=>{const button=root.querySelector('#dlgRefresh');button.disabled=true;const status=root.querySelector('#dlgRefreshStatus');status.textContent='Actualizando…';try{if(typeof window.mrOrbeaSync==='function')await window.mrOrbeaSync();const count=await syncApprovedDialogues(true);const updated=document.querySelector('#dlgRefreshStatus');if(updated)updated.textContent='✓ '+count+' diálogos sincronizados · '+new Date().toLocaleTimeString('es-US',{hour:'numeric',minute:'2-digit'});}catch(e){const updated=document.querySelector('#dlgRefreshStatus');if(updated)updated.textContent='⚠ No se pudo actualizar: '+e.message;}finally{const current=document.querySelector('#dlgRefresh');if(current)current.disabled=false;}};
  root.querySelectorAll('[data-topic]').forEach(el=>el.onclick=()=>showTopic(el.dataset.topic));
  show('special');
 }
